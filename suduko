@@ -1,0 +1,146 @@
+import turtle
+import random
+import copy
+import time
+
+# Configuration
+CONFIG = {
+    'CELL_SIZE': 50,
+    'OFFSET_X': -225,
+    'OFFSET_Y': 225,
+    'FONT': ("Arial", 18, "bold"),
+    'GRID_COLOR': "black",
+    'CURSOR_COLOR': "#FFFFA0"
+}
+
+class SudokuGame:
+    def __init__(self):
+        # Initialize Screen
+        self.screen = turtle.Screen()
+        self.screen.setup(600, 700)
+        self.screen.tracer(0)  # Manual animation updates
+        
+        # State
+        self.board = []
+        self.fixed_cells = set()
+        self.cursor_pos = [0, 0]  # [row, col]
+        self.start_time = time.time()
+        self.is_paused = False
+        
+        # Turtles (Layers)
+        self.grid_drawer = turtle.Turtle()   # Static: Draws lines once
+        self.num_drawer = turtle.Turtle()    # Dynamic: Draws numbers
+        self.cursor_drawer = turtle.Turtle() # Dynamic: Highlighting
+        self.ui_drawer = turtle.Turtle()     # UI: Timer, Text
+        
+        self._init_turtles()
+        self.start_game()
+
+    def _init_turtles(self):
+        for t in [self.grid_drawer, self.num_drawer, self.cursor_drawer, self.ui_drawer]:
+            t.hideturtle()
+            t.penup()
+            t.speed(0)
+
+    def get_coords(self, r, c):
+        x = CONFIG['OFFSET_X'] + c * CONFIG['CELL_SIZE']
+        y = CONFIG['OFFSET_Y'] - r * CONFIG['CELL_SIZE']
+        return x, y
+
+    def draw_grid_static(self):
+        """Draws the grid lines ONLY ONCE."""
+        self.grid_drawer.clear()
+        self.grid_drawer.pensize(1)
+        self.grid_drawer.color("gray")
+        
+        # Draw all cells
+        for r in range(10):
+            # Thicker lines for 3x3 boxes
+            thickness = 3 if r % 3 == 0 else 1
+            color = "black" if r % 3 == 0 else "gray"
+            
+            self.grid_drawer.width(thickness)
+            self.grid_drawer.color(color)
+            
+            # Horizontal
+            self.grid_drawer.penup()
+            self.grid_drawer.goto(CONFIG['OFFSET_X'], CONFIG['OFFSET_Y'] - r * CONFIG['CELL_SIZE'])
+            self.grid_drawer.pendown()
+            self.grid_drawer.goto(CONFIG['OFFSET_X'] + 9 * CONFIG['CELL_SIZE'], CONFIG['OFFSET_Y'] - r * CONFIG['CELL_SIZE'])
+            
+            # Vertical
+            self.grid_drawer.penup()
+            self.grid_drawer.goto(CONFIG['OFFSET_X'] + r * CONFIG['CELL_SIZE'], CONFIG['OFFSET_Y'])
+            self.grid_drawer.pendown()
+            self.grid_drawer.goto(CONFIG['OFFSET_X'] + r * CONFIG['CELL_SIZE'], CONFIG['OFFSET_Y'] - 9 * CONFIG['CELL_SIZE'])
+
+    def draw_cursor(self):
+        """Redraws only the cursor box."""
+        self.cursor_drawer.clear()
+        r, c = self.cursor_pos
+        x, y = self.get_coords(r, c)
+        
+        self.cursor_drawer.goto(x, y)
+        self.cursor_drawer.color(CONFIG['CURSOR_COLOR'])
+        self.cursor_drawer.begin_fill()
+        for _ in range(4):
+            self.cursor_drawer.forward(CONFIG['CELL_SIZE'])
+            self.cursor_drawer.right(90)
+        self.cursor_drawer.end_fill()
+
+    def draw_numbers(self):
+        """Redraws all numbers."""
+        self.num_drawer.clear()
+        for r in range(9):
+            for c in range(9):
+                val = self.board[r][c]
+                if val != 0:
+                    x, y = self.get_coords(r, c)
+                    # Center the text
+                    self.num_drawer.goto(x + CONFIG['CELL_SIZE']/2, y - CONFIG['CELL_SIZE'] + 10)
+                    
+                    # Determine color
+                    if (r, c) in self.fixed_cells:
+                        color = "black"
+                    elif self.is_safe(r, c, val):
+                        color = "blue"
+                    else:
+                        color = "red"
+                    
+                    self.num_drawer.color(color)
+                    self.num_drawer.write(val, align="center", font=CONFIG['FONT'])
+
+    def render(self):
+        """Main render loop."""
+        # Note: We do NOT clear grid_drawer here!
+        if self.is_paused:
+            return
+            
+        self.draw_cursor() # Draw cursor first (background)
+        self.draw_numbers() # Draw numbers on top
+        self.screen.update()
+
+    def move_cursor(self, dr, dc):
+        """Updates cursor position and re-renders."""
+        nr, nc = self.cursor_pos[0] + dr, self.cursor_pos[1] + dc
+        if 0 <= nr < 9 and 0 <= nc < 9:
+            self.cursor_pos = [nr, nc]
+            self.render()
+
+    def start_game(self):
+        # Placeholder for your generation logic
+        self.board = [[0]*9 for _ in range(9)] 
+        self.draw_grid_static() # Draw grid once
+        self.render()
+        
+        # Bind keys
+        self.screen.listen()
+        self.screen.onkey(lambda: self.move_cursor(-1, 0), "Up")
+        self.screen.onkey(lambda: self.move_cursor(1, 0), "Down")
+        # ... other bindings ...
+        self.screen.mainloop()
+
+    # ... Include is_safe and generate_level methods here ...
+
+if __name__ == "__main__":
+    game = SudokuGame()
